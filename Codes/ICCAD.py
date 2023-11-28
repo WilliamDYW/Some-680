@@ -8,11 +8,6 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 import IAmodel
 
-from torch.utils.data import Dataset
-from torchvision import transforms
-from PIL import Image
-import os
-
 class ICCAD2019(Dataset):
     def __init__(self, root_dir, split='train', transform=None):
         self.root_dir = os.path.join(root_dir, split)  # Use 'train' or 'val' as split
