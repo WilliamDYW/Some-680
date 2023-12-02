@@ -1,1 +1,4 @@
 /2019
+*.log
+*.slurm
+/Codes/__pycache__

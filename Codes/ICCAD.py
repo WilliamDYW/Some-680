@@ -67,7 +67,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
+optimizer = optim.Adam(model.parameters(), lr=0.01)
 
 # Training loop
 num_epochs = 10
@@ -99,11 +99,15 @@ for epoch in range(num_epochs):
     model.eval()
     with torch.no_grad():
         val_loss = 0.0
-        correct = 0
+        TP = 0
+        TN = 0
+        FP = 0
+        FN = 0
         total = 0
 
         for batch in test_loader:
             inputs, labels = batch['image'].to(device), batch['label'].to(device)
+            
 
             outputs = model(inputs)
             loss = criterion(outputs, labels)
@@ -112,8 +116,12 @@ for epoch in range(num_epochs):
 
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
-            correct += (predicted == labels).sum().item()
+            TP += (predicted == labels and predicted == torch.zeros(batch_size)).long().sum().item()
+            TN += (predicted == labels and predicted == torch.ones(batch_size)).long().sum().item()
+            FP += (predicted != labels and predicted == torch.zeros(batch_size)).long().sum().item()
+            FN += (predicted != labels and predicted == torch.ones(batch_size)).long().sum().item()
 
-        accuracy = correct / total
-        print(f"Validation Loss: {val_loss / len(test_loader)}, Accuracy: {accuracy}")
+        precision = TP / (TP+FP)
+        recall    = TP / (TP+FN)
+        print(f"Validation Loss: {val_loss / len(test_loader)}, Precision: {precision}, Recall: {recall}")
 

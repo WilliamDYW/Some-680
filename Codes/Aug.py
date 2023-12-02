@@ -63,7 +63,7 @@ def flip_images_in_directory(input_directory, output_directory, keyword):
             augmented_image = transform(image)
             augmented_image.save(output_path)
 # Example usage:
-input_directory = '../2019/val/hotspot'
-output_directory = '../2019/val/hotspot'
-keyword_to_flip = 'array'
+input_directory = '../2019/train/hotspot'
+output_directory = '../2019/train/hotspot'
+keyword_to_flip = 'MX'
 flip_images_in_directory(input_directory, output_directory, keyword_to_flip)
