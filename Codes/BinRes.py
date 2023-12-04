@@ -51,9 +51,14 @@ class ResNet(nn.Module):
         )
 
         self.final0 = nn.AvgPool2d((2,2))
-        self.final1 = nn.Linear(in_features=64*62*62, out_features=2)
-        #self.final2 = nn.Linear(in_features=1024, out_features=2)
-        
+        self.final1 = nn.Sequential(
+            nn.Linear(in_features=64*62*62, out_features=1024),
+            nn.ReLU(inplace=True)
+        )
+        self.final2 = nn.Sequential(
+            nn.Linear(in_features=1024, out_features=2),
+            nn.ReLU(inplace=True)
+        )
 
     def forward(self, x):
         
@@ -64,6 +69,6 @@ class ResNet(nn.Module):
         print(x.size(0))
         res = x.view(128, -1)
         
-        x = self.final1(res)
-
-        return x
+        res = self.final1(res)
+        res = self.final2(res)
+        return res

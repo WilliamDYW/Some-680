@@ -118,7 +118,7 @@ for epoch in range(num_epochs):
         optimizer.step()
 
         running_loss += loss.item()
-        print(running_loss)
+        #print(running_loss)
 
     print(f"Epoch {epoch+1}/{num_epochs}, Loss: {running_loss / len(train_loader)}")
 
