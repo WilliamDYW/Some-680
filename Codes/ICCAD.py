@@ -7,6 +7,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import IAmodel
+import BinRes
 
 def normalize(data):
     if(data.data[0] < 0 and data.data[1] > 0):
@@ -44,7 +45,7 @@ class ICCAD2019(Dataset):
 
     def __getitem__(self, idx):
         img_path, class_name = self.images[idx]
-        image = Image.open(img_path).convert('L')
+        image = Image.open(img_path).convert('RGB')
 
         if self.transform:
             image = self.transform(image)
@@ -71,7 +72,7 @@ test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 # Define your model, loss function, and optimizer
 num_classes = len(dataset.classes)  # Adjust based on your dataset
-model = IAmodel.SequentialInceptionAttentionBlocks(num_blocks=2)
+model = BinRes.ResNet(3)
 
 print(torch.cuda.device_count())
 
