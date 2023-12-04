@@ -8,6 +8,17 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 import IAmodel
 
+def normalize(data):
+    if(data.data[0] < 0 and data.data[1] > 0):
+        data.data[0], data.data[1] = 0,1
+        return data
+    if(data.data[0] > 0 and data.data[1] < 0):
+        data.data[0], data.data[1] = 1,0
+        return data
+    data.data[0], data.data[1] = data.data[0]/(data.data[0]+data.data[1]),data.data[1]/(data.data[0]+data.data[1])
+    return data
+
+
 class ICCAD2019(Dataset):
     def __init__(self, root_dir, split='train', transform=None):
         self.root_dir = os.path.join(root_dir, split)  # Use 'train' or 'val' as split
@@ -60,18 +71,26 @@ test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 # Define your model, loss function, and optimizer
 num_classes = len(dataset.classes)  # Adjust based on your dataset
-model = IAmodel.SequentialInceptionAttentionBlocks(num_blocks=5)
+model = IAmodel.SequentialInceptionAttentionBlocks(num_blocks=2)
+
+print(torch.cuda.device_count())
 
 # Check if GPU is available
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
+z = torch.zeros(batch_size)
+o = torch.ones(batch_size)
+
+z = z.to(device)
+o = o.to(device)
+
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=0.01)
+optimizer = optim.Adam(model.parameters(), lr=0.001)
 
 # Training loop
-num_epochs = 10
-
+num_epochs = 100
+a = 0.1
 for epoch in range(num_epochs):
     model.train()
     running_loss = 0.0
@@ -87,11 +106,18 @@ for epoch in range(num_epochs):
         optimizer.zero_grad()
 
         outputs = model(inputs)
+
+        #for j in range(labels.size(0)):
+        #   outputs[j,:] = normalize(outputs[j,:])
+        #outputs.data = nn.functional.normalize(outputs.data, dim = -1)
+        print(outputs.data)
+        #outputs.data[1] -= a
         loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
 
         running_loss += loss.item()
+        print(running_loss)
 
     print(f"Epoch {epoch+1}/{num_epochs}, Loss: {running_loss / len(train_loader)}")
 
@@ -110,18 +136,21 @@ for epoch in range(num_epochs):
             
 
             outputs = model(inputs)
+            #for j in range(labels.size(0)):
+            #    outputs[j,:] = normalize(outputs[j,:])
+
             loss = criterion(outputs, labels)
 
             val_loss += loss.item()
 
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
-            TP += (predicted == labels and predicted == torch.zeros(batch_size)).long().sum().item()
-            TN += (predicted == labels and predicted == torch.ones(batch_size)).long().sum().item()
-            FP += (predicted != labels and predicted == torch.zeros(batch_size)).long().sum().item()
-            FN += (predicted != labels and predicted == torch.ones(batch_size)).long().sum().item()
+            TP += ((predicted == labels).long() * (predicted == torch.zeros(labels.size(0)).to(device)).long()).sum().item()
+            TN += ((predicted == labels).long() * (predicted == torch.ones(labels.size(0)).to(device)).long()).sum().item()
+            FP += ((predicted != labels).long() * (predicted == torch.zeros(labels.size(0)).to(device)).long()).sum().item()
+            FN += ((predicted != labels).long() * (predicted == torch.ones(labels.size(0)).to(device)).long()).sum().item()
 
-        precision = TP / (TP+FP)
-        recall    = TP / (TP+FN)
-        print(f"Validation Loss: {val_loss / len(test_loader)}, Precision: {precision}, Recall: {recall}")
+        print(f"TP: {TP}, TN: {TN}, FP: {FP}, FN: {FN}, Validation Loss: {val_loss / len(test_loader)}")
+        if(TP == 0):
+            a += 0.05
 

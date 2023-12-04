@@ -50,7 +50,7 @@ class ChannelAttentionBlock(nn.Module):
         pooled_sum = max_pooled_encoded_decoded + avg_pooled_encoded_decoded
 
         # Element-wise activation
-        pooled_sum = torch.sigmoid(pooled_sum)
+        pooled_sum = nn.functional.relu(pooled_sum)
 
         # Broadcast into H*W*C
         pooled_sum_broadcasted = pooled_sum.expand_as(x)
@@ -70,9 +70,6 @@ class SpatialAttentionBlock(nn.Module):
             nn.ReLU(inplace=True)
         )
 
-        # Element-wise activation
-        self.activation = nn.Sigmoid()
-
     def forward(self, x):
         # Max pooling
         max_pooled_final, _ = torch.max(x, dim=1, keepdim=True)
@@ -87,7 +84,7 @@ class SpatialAttentionBlock(nn.Module):
         final_conv_result = self.concat_conv(final_concat)
 
         # Element-wise activation
-        final_conv_result = self.activation(final_conv_result)
+        final_conv_result = nn.functional.relu(final_conv_result)
 
         # Broadcast into H*W*C
         final_conv_result_broadcasted = final_conv_result.expand_as(x)
