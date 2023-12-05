@@ -87,11 +87,10 @@ z = z.to(device)
 o = o.to(device)
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
+optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-5)
 
 # Training loop
 num_epochs = 100
-a = 0.1
 for epoch in range(num_epochs):
     model.train()
     running_loss = 0.0
@@ -99,7 +98,7 @@ for epoch in range(num_epochs):
     i = 0
 
     for batch in train_loader:
-        print(i)
+        print(i, end=" ")
         i += 1
 
         inputs, labels = batch['image'].to(device), batch['label'].to(device)
@@ -111,15 +110,16 @@ for epoch in range(num_epochs):
         #for j in range(labels.size(0)):
         #   outputs[j,:] = normalize(outputs[j,:])
         #outputs.data = nn.functional.normalize(outputs.data, dim = -1)
-        print(outputs.data)
-        #outputs.data[1] -= a
+
+        #print(outputs.data)	
         loss = criterion(outputs, labels)
+        #print(loss)
         loss.backward()
         optimizer.step()
 
         running_loss += loss.item()
         #print(running_loss)
-
+    print()
     print(f"Epoch {epoch+1}/{num_epochs}, Loss: {running_loss / len(train_loader)}")
 
     # Validation loop (optional)
@@ -137,6 +137,7 @@ for epoch in range(num_epochs):
             
 
             outputs = model(inputs)
+
             #for j in range(labels.size(0)):
             #    outputs[j,:] = normalize(outputs[j,:])
 
@@ -152,6 +153,3 @@ for epoch in range(num_epochs):
             FN += ((predicted != labels).long() * (predicted == torch.ones(labels.size(0)).to(device)).long()).sum().item()
 
         print(f"TP: {TP}, TN: {TN}, FP: {FP}, FN: {FN}, Validation Loss: {val_loss / len(test_loader)}")
-        if(TP == 0):
-            a += 0.05
-
