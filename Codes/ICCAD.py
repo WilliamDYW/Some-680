@@ -66,13 +66,13 @@ train_dataset = ICCAD2019(root_dir=root_directory, split='train', transform=tran
 test_dataset = ICCAD2019(root_dir=root_directory, split='val', transform=transform)
 
 # Create data loaders for training and testing
-batch_size = 128
+batch_size = 32
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 # Define your model, loss function, and optimizer
 num_classes = len(dataset.classes)  # Adjust based on your dataset
-model = BinRes.ResNet(3)
+model = BinRes.ResNet_10(3)
 
 print(torch.cuda.device_count())
 
@@ -87,7 +87,8 @@ z = z.to(device)
 o = o.to(device)
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-5)
+optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-3)
+F1 = 0
 
 # Training loop
 num_epochs = 100
@@ -131,7 +132,7 @@ for epoch in range(num_epochs):
         FP = 0
         FN = 0
         total = 0
-
+        old_F1 = F1
         for batch in test_loader:
             inputs, labels = batch['image'].to(device), batch['label'].to(device)
             
@@ -151,5 +152,22 @@ for epoch in range(num_epochs):
             TN += ((predicted == labels).long() * (predicted == torch.ones(labels.size(0)).to(device)).long()).sum().item()
             FP += ((predicted != labels).long() * (predicted == torch.zeros(labels.size(0)).to(device)).long()).sum().item()
             FN += ((predicted != labels).long() * (predicted == torch.ones(labels.size(0)).to(device)).long()).sum().item()
+            if(TP + FP == 0):
+                precision = 0
+            else:
+                precision = TP/(TP+FP)
+            if(TP + FN == 0):
+                recall = 0
+            else:
+                recall = TP/(TP+FN)
+            if(precision + recall == 0):
+                F1 = 0
+            else:
+                F1 = 2*precision*recall/(precision+recall)
+            if(old_F1 < F1):
+                torch.save(model.state_dict(), "./whole_best.pt")
+                print("saved!")
 
-        print(f"TP: {TP}, TN: {TN}, FP: {FP}, FN: {FN}, Validation Loss: {val_loss / len(test_loader)}")
+
+
+        print(f"TP: {TP}, TN: {TN}, FP: {FP}, FN: {FN}, Validation Loss: {val_loss / len(test_loader)}, precision: {precision}, recall: {recall}, F1: {F1}")
