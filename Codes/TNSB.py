@@ -20,8 +20,8 @@ def normalize(data):
     return data
 
 
-class ICCAD2019(Dataset):
-    def __init__(self, root_dir, split='train', transform=None):
+class TNSB(Dataset):
+    def __init__(self, root_dir, split='val', transform=None):
         self.root_dir = os.path.join(root_dir, split)  # Use 'train' or 'val' as split
         self.split = split
         self.transform = transform
@@ -54,25 +54,23 @@ class ICCAD2019(Dataset):
         return {'image': image, 'label': label}
 
 # Example usage:
-root_directory = '../2019/'
+root_directory = '../TNSB/'
 transform = transforms.Compose([
     transforms.Resize((256, 256)),
     transforms.ToTensor(),
 ])
 
-dataset = ICCAD2019(root_dir=root_directory, transform=transform)
-
-train_dataset = ICCAD2019(root_dir=root_directory, split='train', transform=transform)
-test_dataset = ICCAD2019(root_dir=root_directory, split='val', transform=transform)
+dataset = TNSB(root_dir=root_directory, transform=transform)
+test_dataset = TNSB(root_dir=root_directory, split='val', transform=transform)
 
 # Create data loaders for training and testing
 batch_size = 32
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
 # Define your model, loss function, and optimizer
 num_classes = len(dataset.classes)  # Adjust based on your dataset
-model = BinRes.ResNet_whole_BN(3)
+model = BinRes.ResNet_whole(3)
+model.load_state_dict(torch.load("./pt/whole_best.pt"))
 
 print(torch.cuda.device_count())
 
@@ -86,43 +84,11 @@ o = torch.ones(batch_size)
 z = z.to(device)
 o = o.to(device)
 
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-3)
 F1 = 0
-old_F1 = 0
+
 # Training loop
-num_epochs = 100
+num_epochs = 1
 for epoch in range(num_epochs):
-    model.train()
-    running_loss = 0.0
-
-    i = 0
-
-    for batch in train_loader:
-        print(i, end=" ")
-        i += 1
-
-        inputs, labels = batch['image'].to(device), batch['label'].to(device)
-
-        optimizer.zero_grad()
-
-        outputs = model(inputs)
-
-        #for j in range(labels.size(0)):
-        #   outputs[j,:] = normalize(outputs[j,:])
-        #outputs.data = nn.functional.normalize(outputs.data, dim = -1)
-
-        #print(outputs.data)	
-        loss = criterion(outputs, labels)
-        #print(loss)
-        loss.backward()
-        optimizer.step()
-
-        running_loss += loss.item()
-        #print(running_loss)
-    print()
-    print(f"Epoch {epoch+1}/{num_epochs}, Loss: {running_loss / len(train_loader)}")
-
     # Validation loop (optional)
     model.eval()
     with torch.no_grad():
@@ -138,13 +104,6 @@ for epoch in range(num_epochs):
             
 
             outputs = model(inputs)
-
-            #for j in range(labels.size(0)):
-            #    outputs[j,:] = normalize(outputs[j,:])
-
-            loss = criterion(outputs, labels)
-
-            val_loss += loss.item()
 
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
@@ -164,11 +123,6 @@ for epoch in range(num_epochs):
                 F1 = 0
             else:
                 F1 = 2*precision*recall/(precision+recall)
-        if(old_F1 < F1):
-            old_F1 = F1
-            torch.save(model.state_dict(), "./whole_BN_double_best.pt")
-            print("saved!")
-
 
 
         print(f"TP: {TP}, TN: {TN}, FP: {FP}, FN: {FN}, Validation Loss: {val_loss / len(test_loader)}, precision: {precision}, recall: {recall}, F1: {F1}")

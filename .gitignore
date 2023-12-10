@@ -2,3 +2,5 @@
 *.log
 *.slurm
 /Codes/__pycache__
+/TNSB
+*.pt
